@@ -17,7 +17,7 @@ EX_OBJS = $(EX_SOURCES_S:.s=.o) $(EX_SOURCES_C:.c=.o)
 # Sources
 
 SOURCES_S = src/startup_stm32f051x8.s
-SOURCES_C = src/main.c src/system_stm32f0xx.c src/can_core.c
+SOURCES_C = src/main.c src/system_stm32f0xx.c src/can_core.c src/can_callbacks.c src/can_api.c src/stm32f0xx_it.c
 SOURCES = $(SOURCES_S) $(SOURCES_C)
 OBJS = $(SOURCES_S:.s=.o) $(SOURCES_C:.c=.o)
 
@@ -64,11 +64,11 @@ LDFLAGS = -static $(MCUFLAGS) -Wl,--start-group -lgcc -lc -lg -Wl,--end-group\
 
 .PHONY: all clean flash erase examples
 
-all: $(PROJECT).bin $(PROJECT).asm
+all: tags $(PROJECT).bin $(PROJECT).asm
 
 clean:
 	$(RM) $(OBJS) $(PROJECT).elf $(PROJECT).bin $(PROJECT).asm \
-	$(EXAMPLES:=.bin) $(EXAMPLES:=.elf) ./examples/*.o
+	$(EXAMPLES:=.bin) $(EXAMPLES:=.elf) ./examples/*.o tags
 
 # Examples
 
@@ -110,6 +110,9 @@ GDB_P=4242
 gdb-st-util: $(PROJECT).elf
 	$(GDB) --eval-command="target extended-remote localhost:$(GDB_PORT)"\
 	       --eval-command="monitor halt" $(PROJECT).elf
+
+tags:
+	ctags -R .
 
 $(PROJECT).elf: $(OBJS)
 

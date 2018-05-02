@@ -91,6 +91,8 @@ readCANRegisters(const enum REGISTER reg, uint8_t values[], const uint8_t n) {
 
 void
 resetCAN() {
+        int i;
+        uint8_t zeros[14] = {0};
         startTransmit();
         sendSPI(INSTRUCTION_RESET);
         endTransmit();
@@ -121,8 +123,6 @@ setBitrateCAN() {
 
 void
 config_CAN(void) {
-        int i;
-        uint8_t zeros[14] = {0};
         /*
          * Init GPIO
          */
@@ -158,7 +158,7 @@ config_CAN(void) {
          * Init CAN
          */
         resetCAN();
-        setBitrateCAN();
+        //setBitrateCAN();
 
         return;
 }

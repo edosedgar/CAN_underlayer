@@ -121,35 +121,61 @@ enum MASK {
 };
 
 enum RXF {
-       RXF0 = 0,
-       RXF1 = 1,
-       RXF2 = 2,
-       RXF3 = 3,
-       RXF4 = 4,
-       RXF5 = 5
+        RXF0 = 0,
+        RXF1 = 1,
+        RXF2 = 2,
+        RXF3 = 3,
+        RXF4 = 4,
+        RXF5 = 5
 };
 
 enum RXBn {
-       RXB0 = 0,
-       RXB1 = 1
+        RXB0 = 0,
+        RXB1 = 1
 };
 
 enum TXBn {
-       TXB0 = 0,
-       TXB1 = 1,
-       TXB2 = 2
+        TXB0 = 0,
+        TXB1 = 1,
+        TXB2 = 2
 };
 
 enum CANINTF {
-       CANINTF_RX0IF = 0x01,
-       CANINTF_RX1IF = 0x02,
-       CANINTF_TX0IF = 0x04,
-       CANINTF_TX1IF = 0x08,
-       CANINTF_TX2IF = 0x10,
-       CANINTF_ERRIF = 0x20,
-       CANINTF_WAKIF = 0x40,
-       CANINTF_MERRF = 0x80
+        CANINTF_RX0IF = 0x01,
+        CANINTF_RX1IF = 0x02,
+        CANINTF_TX0IF = 0x04,
+        CANINTF_TX1IF = 0x08,
+        CANINTF_TX2IF = 0x10,
+        CANINTF_ERRIF = 0x20,
+        CANINTF_WAKIF = 0x40,
+        CANINTF_MERRF = 0x80
 };
+
+enum CAN_CLOCK {
+        MCP_20MHZ,
+        MCP_16MHZ,
+        MCP_8MHZ
+};
+
+enum CAN_SPEED {
+        CAN_5KBPS,
+        CAN_10KBPS,
+        CAN_20KBPS,
+        CAN_31K25BPS,
+        CAN_33KBPS,
+        CAN_40KBPS,
+        CAN_50KBPS,
+        CAN_80KBPS,
+        CAN_83K3BPS,
+        CAN_95KBPS,
+        CAN_100KBPS,
+        CAN_125KBPS,
+        CAN_200KBPS,
+        CAN_250KBPS,
+        CAN_500KBPS,
+        CAN_1000KBPS
+};
+
 
 void config_CAN(void);
 

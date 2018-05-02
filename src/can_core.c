@@ -93,6 +93,7 @@ void
 resetCAN() {
         int i;
         uint8_t zeros[14] = {0};
+
         startTransmit();
         sendSPI(INSTRUCTION_RESET);
         endTransmit();

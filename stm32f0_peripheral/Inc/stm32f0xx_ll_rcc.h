@@ -37,6 +37,8 @@
 #ifndef __STM32F0xx_LL_RCC_H
 #define __STM32F0xx_LL_RCC_H
 
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+
 #ifdef __cplusplus
 extern "C" {
 #endif

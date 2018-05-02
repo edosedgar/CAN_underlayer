@@ -35,5 +35,6 @@ void can_set_loop(void (*loop_routine)(void));
 
 void can_add_get(const char* sensor_name,
                  int (*get_routine)(uint32_t* buf));
+void can_do_loop(void);
 
 #endif

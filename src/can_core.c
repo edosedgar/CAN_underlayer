@@ -1,7 +1,7 @@
 #include "stm32f0xx_ll_spi.h"
 #include "stm32f0xx_ll_bus.h"
 #include "stm32f0xx_ll_gpio.h"
-#include "CAN.h"
+#include "can_core.h"
 
 static inline void
 startTransmit() {

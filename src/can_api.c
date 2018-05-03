@@ -1,5 +1,6 @@
 #include <stm32f0xx_ll_system.h>
 #include <string.h>
+#include <stdio.h>
 #include "can_api.h"
 #include "can_core.h"
 
@@ -21,22 +22,19 @@ struct cbcks_s cbcks;
 
 // Public stuff
 
-void can_init(void)
-{
-    memset(&cbcks, 0x00, sizeof(cbcks));
-    can_core_config();
-}
-
-void can_set_setup(void (*setup_routine)(void))
+void can_do_setup(void (*setup_routine)(void))
 {
     ASSERT(setup_routine);
+    memset(&cbcks, 0x00, sizeof(cbcks));
+    can_core_config();
     cbcks.setup = setup_routine;
 }
 
-void can_set_loop(void (*loop_routine)(void))
+void can_do_loop(void (*loop_routine)(void))
 {
     ASSERT(loop_routine);
     cbcks.loop = loop_routine;
+    (void)cbcks.loop();
 }
 
 void can_add_get(const char* sensor_name,
@@ -47,13 +45,41 @@ void can_add_get(const char* sensor_name,
     cbcks.sens_cbcks[cbcks.sens_num].get = get_routine;
     (void)strncpy(cbcks.sens_cbcks[cbcks.sens_num].sens_name,
                   sensor_name,
-                  MAX_STRING_LENGTH);
+                  MAX_NAME_LENGTH);
     cbcks.sens_num++;
 }
 
-void can_do_loop(void)
+// Private
+
+void can_get(char* result)
 {
-    (void)cbcks.loop();
+    int char_num = 0;
+    int temp;
+    sprintf(result + char_num,
+            "{"
+                "\"%d\":"
+                "{ %n", IDENTIFICATOR, &temp);
+    char_num += temp;
+    for (int i = 0; i < cbcks.sens_num; i++) {
+        sprintf(result + char_num,
+                        "{"
+                            "\"sens_name\": \"%s\","
+                            "\"rawdata\": [ %n",
+                cbcks.sens_cbcks[i].sens_name, &temp);
+        char_num += temp;
+        uint32_t buf[MAX_BUFFER_LENGTH] = {0}; //< Sauron's eye is watching ya
+        int buf_size = cbcks.sens_cbcks[i].get(buf);
+        for (int j = 0; j < buf_size; j++) {
+            sprintf(result + char_num, "%lu, %n", buf[j], &temp);
+            char_num += temp;
+        }
+        sprintf(result + char_num,          "]"
+                        "}%n" , &temp);
+        char_num += temp;
+    }
+    sprintf(result + char_num,
+                "} "
+            "}");
 }
 
 #undef ASSERT

@@ -19,11 +19,9 @@ main(void) {
         config_RCC();
         config_USART();
 
-        (void)can_init();
-        (void)can_set_setup(my_setup);
-        (void)can_set_loop(my_loop);
+        (void)can_do_setup(my_setup);
         (void)can_add_get("PC8", get_PC8);
-        (void)can_do_loop();
+        (void)can_do_loop(my_loop);
 
         while (1)
                 //if (LL_USART_IsActiveFlag_RXNE(USART1))

@@ -23,14 +23,7 @@ main(void) {
         (void)can_add_get("PC8", get_PC8);
         (void)can_do_loop(my_loop);
 
-        while (1)
-                //if (LL_USART_IsActiveFlag_RXNE(USART1))
-                //{
-                        //byte = LL_USART_ReceiveData8(USART1);
-                        //LL_USART_TransmitData8(USART1, byte);
-                        //while (!LL_USART_IsActiveFlag_TC(USART1));
-                        //LL_GPIO_TogglePin(GPIOC, LL_GPIO_PIN_9);
-                //}
+        while (1);
         return 0;
 }
 

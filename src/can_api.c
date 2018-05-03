@@ -14,8 +14,9 @@
 #define ASSERT(cond)     \
     do {                 \
         __disable_irq(); \
-        if (cond)        \
+        if (!cond)       \
             while (1);   \
+        __enable_irq();  \
     } while (0)
 
 struct cbcks_s cbcks;

@@ -1,6 +1,95 @@
 #ifndef CAN_H
 #define CAN_H
 
+typedef uint32_t canid_t;
+/*
+ * CAN defines
+ */
+/* special address description flags for the CAN_ID */
+#define CAN_EFF_FLAG 0x80000000UL /* EFF/SFF is set in the MSB */
+#define CAN_RTR_FLAG 0x40000000UL /* remote transmission request */
+#define CAN_ERR_FLAG 0x20000000UL /* error message frame */
+
+/* valid bits in CAN ID for frame formats */
+#define CAN_SFF_MASK 0x000007FFUL /* standard frame format (SFF) */
+#define CAN_EFF_MASK 0x1FFFFFFFUL /* extended frame format (EFF) */
+#define CAN_ERR_MASK 0x1FFFFFFFUL /* omit EFF, RTR, ERR flags */
+
+/*
+ * Speed Defines
+ */
+#define MCP_8MHz_1000kBPS_CFG1 (0x00)
+#define MCP_8MHz_1000kBPS_CFG2 (0x80)
+#define MCP_8MHz_1000kBPS_CFG3 (0x80)
+
+#define MCP_8MHz_500kBPS_CFG1 (0x00)
+#define MCP_8MHz_500kBPS_CFG2 (0x90)
+#define MCP_8MHz_500kBPS_CFG3 (0x82)
+
+#define MCP_8MHz_250kBPS_CFG1 (0x00)
+#define MCP_8MHz_250kBPS_CFG2 (0xB1)
+#define MCP_8MHz_250kBPS_CFG3 (0x85)
+
+#define MCP_8MHz_200kBPS_CFG1 (0x00)
+#define MCP_8MHz_200kBPS_CFG2 (0xB4)
+#define MCP_8MHz_200kBPS_CFG3 (0x86)
+
+#define MCP_8MHz_125kBPS_CFG1 (0x01)
+#define MCP_8MHz_125kBPS_CFG2 (0xB1)
+#define MCP_8MHz_125kBPS_CFG3 (0x85)
+
+#define MCP_8MHz_100kBPS_CFG1 (0x01)
+#define MCP_8MHz_100kBPS_CFG2 (0xB4)
+#define MCP_8MHz_100kBPS_CFG3 (0x86)
+
+#define MCP_8MHz_80kBPS_CFG1 (0x01)
+#define MCP_8MHz_80kBPS_CFG2 (0xBF)
+#define MCP_8MHz_80kBPS_CFG3 (0x87)
+
+#define MCP_8MHz_50kBPS_CFG1 (0x03)
+#define MCP_8MHz_50kBPS_CFG2 (0xB4)
+#define MCP_8MHz_50kBPS_CFG3 (0x86)
+
+#define MCP_8MHz_40kBPS_CFG1 (0x03)
+#define MCP_8MHz_40kBPS_CFG2 (0xBF)
+#define MCP_8MHz_40kBPS_CFG3 (0x87)
+
+#define MCP_8MHz_33k3BPS_CFG1 (0x47)
+#define MCP_8MHz_33k3BPS_CFG2 (0xE2)
+#define MCP_8MHz_33k3BPS_CFG3 (0x85)
+
+#define MCP_8MHz_31k25BPS_CFG1 (0x07)
+#define MCP_8MHz_31k25BPS_CFG2 (0xA4)
+#define MCP_8MHz_31k25BPS_CFG3 (0x84)
+
+#define MCP_8MHz_20kBPS_CFG1 (0x07)
+#define MCP_8MHz_20kBPS_CFG2 (0xBF)
+#define MCP_8MHz_20kBPS_CFG3 (0x87)
+
+#define MCP_8MHz_10kBPS_CFG1 (0x0F)
+#define MCP_8MHz_10kBPS_CFG2 (0xBF)
+#define MCP_8MHz_10kBPS_CFG3 (0x87)
+
+#define MCP_8MHz_5kBPS_CFG1 (0x1F)
+#define MCP_8MHz_5kBPS_CFG2 (0xBF)
+#define MCP_8MHz_5kBPS_CFG3 (0x87)
+
+/*
+ * Variables
+ */
+static const uint8_t CANCTRL_REQOP = 0xE0;
+static const uint8_t CANCTRL_ABAT = 0x10;
+static const uint8_t CANCTRL_OSM = 0x08;
+static const uint8_t CANCTRL_CLKEN = 0x04;
+static const uint8_t CANCTRL_CLKPRE = 0x03;
+
+static const uint8_t CANSTAT_OPMOD = 0xE0;
+static const uint8_t CANSTAT_ICOD = 0x0E;
+
+static const uint8_t TXB_EXIDE_MASK = 0x08;
+static const uint8_t DLC_MASK       = 0x0F;
+static const uint8_t RTR_MASK       = 0x40;
+
 static const uint8_t RXBnCTRL_RXM_STD    = 0x20;
 static const uint8_t RXBnCTRL_RXM_EXT    = 0x40;
 static const uint8_t RXBnCTRL_RXM_STDEXT = 0x00;
@@ -8,6 +97,18 @@ static const uint8_t RXBnCTRL_RXM_MASK   = 0x60;
 static const uint8_t RXBnCTRL_RTR        = 0x08;
 static const uint8_t RXB0CTRL_BUKT       = 0x04;
 
+static const uint8_t MCP_SIDH = 0;
+static const uint8_t MCP_SIDL = 1;
+static const uint8_t MCP_EID8 = 2;
+static const uint8_t MCP_EID0 = 3;
+static const uint8_t MCP_DLC  = 4;
+static const uint8_t MCP_DATA = 5;
+
+#define N_TXBUFFERS 3
+
+/*
+ * Enumeratons
+ */
 enum INSTRUCTION {
         INSTRUCTION_WRITE       = 0x02,
         INSTRUCTION_READ        = 0x03,
@@ -176,7 +277,43 @@ enum CAN_SPEED {
         CAN_1000KBPS
 };
 
+enum CANCTRL_REQOP_MODE {
+        CANCTRL_REQOP_NORMAL     = 0x00,
+        CANCTRL_REQOP_SLEEP      = 0x20,
+        CANCTRL_REQOP_LOOPBACK   = 0x40,
+        CANCTRL_REQOP_LISTENONLY = 0x60,
+        CANCTRL_REQOP_CONFIG     = 0x80,
+        CANCTRL_REQOP_POWERUP    = 0xE0
+};
 
-void config_CAN(void);
+enum TXBnCTRL {
+        TXB_ABTF   = 0x40,
+        TXB_MLOA   = 0x20,
+        TXB_TXERR  = 0x10,
+        TXB_TXREQ  = 0x08,
+        TXB_TXIE   = 0x04,
+        TXB_TXP    = 0x03
+};
+
+struct TXBn_REGS {
+        enum REGISTER CTRL;
+        enum REGISTER SIDH;
+        enum REGISTER DATA;
+};
+
+/*
+ * Message frame format
+ */
+#define CAN_MAX_DLEN 8
+
+struct can_frame {
+        canid_t can_id;  /* 32 bit CAN_ID + EFF/RTR/ERR flags */
+        uint8_t can_dlc; /* frame payload length in byte (0 .. CAN_MAX_DLEN) */
+        uint8_t data[CAN_MAX_DLEN] __attribute__((aligned(8)));
+};
+
+void can_core_config(void);
+
+enum ERROR can_send_msg(const struct can_frame *frame);
 
 #endif

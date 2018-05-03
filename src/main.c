@@ -7,11 +7,17 @@
 #include "can_api.h"
 #include "can_callbacks.h"
 
+#include "xprintf.h"
+
 void config_RCC(void);
+void config_USART(void);
+char usart_getc(void);
+void usart_putc(char symbol);
 
 int
 main(void) {
         config_RCC();
+        config_USART();
 
         (void)can_init();
         (void)can_set_setup(my_setup);
@@ -28,6 +34,60 @@ main(void) {
                         //LL_GPIO_TogglePin(GPIOC, LL_GPIO_PIN_9);
                 //}
         return 0;
+}
+
+void
+config_USART() {
+        /*
+         * GPIO Init
+         */
+        LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
+        //USART1_TX
+        LL_GPIO_SetPinMode(GPIOA, LL_GPIO_PIN_9, LL_GPIO_MODE_ALTERNATE);
+        LL_GPIO_SetAFPin_8_15(GPIOA, LL_GPIO_PIN_9, LL_GPIO_AF_1);
+        LL_GPIO_SetPinSpeed(GPIOA, LL_GPIO_PIN_9, LL_GPIO_SPEED_FREQ_HIGH);
+        //USART1_RX
+        LL_GPIO_SetPinMode(GPIOA, LL_GPIO_PIN_10, LL_GPIO_MODE_ALTERNATE);
+        LL_GPIO_SetAFPin_8_15(GPIOA, LL_GPIO_PIN_10, LL_GPIO_AF_1);
+        LL_GPIO_SetPinSpeed(GPIOA, LL_GPIO_PIN_10, LL_GPIO_SPEED_FREQ_HIGH);
+        /*
+         * UART Setting
+         */
+        //USART Set clock source
+        LL_APB1_GRP2_EnableClock(LL_APB1_GRP2_PERIPH_USART1);
+        LL_RCC_SetUSARTClockSource(LL_RCC_USART1_CLKSOURCE_PCLK1);
+        //USART Setting
+        LL_USART_SetTransferDirection(USART1, LL_USART_DIRECTION_TX_RX);
+        LL_USART_SetParity(USART1, LL_USART_PARITY_NONE);
+        LL_USART_SetDataWidth(USART1, LL_USART_DATAWIDTH_8B);
+        LL_USART_SetStopBitsLength(USART1, LL_USART_STOPBITS_1);
+        LL_USART_SetTransferBitOrder(USART1, LL_USART_BITORDER_LSBFIRST);
+        LL_USART_SetBaudRate(USART1, SystemCoreClock,
+                             LL_USART_OVERSAMPLING_16, 115200);
+        LL_USART_Enable(USART1);
+        while (!(LL_USART_IsActiveFlag_TEACK(USART1) &&
+                 LL_USART_IsActiveFlag_REACK(USART1)));
+        /*
+         * xprintf setting
+         */
+        xdev_out(usart_putc);
+        xdev_in(usart_getc);
+        return;
+}
+
+char
+usart_getc(void) {
+        char byte;
+
+        if (LL_USART_IsActiveFlag_RXNE(USART1))
+                byte = LL_USART_ReceiveData8(USART1);
+        return byte;
+}
+
+void
+usart_putc(char symbol) {
+        LL_USART_TransmitData8(USART1, symbol);
+        while (!LL_USART_IsActiveFlag_TC(USART1));
 }
 
 /**

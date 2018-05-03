@@ -24,7 +24,7 @@ struct cbcks_s cbcks;
 void can_init(void)
 {
     memset(&cbcks, 0x00, sizeof(cbcks));
-//    config_can();
+    can_core_config();
 }
 
 void can_set_setup(void (*setup_routine)(void))

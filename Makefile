@@ -17,7 +17,9 @@ EX_OBJS = $(EX_SOURCES_S:.s=.o) $(EX_SOURCES_C:.c=.o)
 # Sources
 
 SOURCES_S = src/startup_stm32f051x8.s
-SOURCES_C = src/main.c src/system_stm32f0xx.c src/can_core.c src/can_callbacks.c src/can_api.c src/stm32f0xx_it.c
+SOURCES_C = src/main.c src/system_stm32f0xx.c src/can_core.c \
+	    src/can_callbacks.c src/can_api.c src/stm32f0xx_it.c \
+	    src/xprintf.c
 SOURCES = $(SOURCES_S) $(SOURCES_C)
 OBJS = $(SOURCES_S:.s=.o) $(SOURCES_C:.c=.o)
 

@@ -2,16 +2,8 @@
 # Makefile for STM32F0 Discovery board projects
 
 PROJECT = temp
-EXAMPLES = exti usart adcdma
 OPENOCD_SCRIPT_DIR ?= /usr/share/openocd/scripts
 HEAP_SIZE = 0x400
-
-# Example core sources
-
-EX_SOURCES_S = src/startup_stm32f051x8.s
-EX_SOURCES_C = src/system_stm32f0xx.c
-EX_SOURCES = $(EX_SOURCES_S) $(EX_SOURCES_C)
-EX_OBJS = $(EX_SOURCES_S:.s=.o) $(EX_SOURCES_C:.c=.o)
 
 ################
 # Sources
@@ -71,22 +63,6 @@ all: tags $(PROJECT).bin $(PROJECT).asm
 clean:
 	$(RM) $(OBJS) $(PROJECT).elf $(PROJECT).bin $(PROJECT).asm \
 	$(EXAMPLES:=.bin) $(EXAMPLES:=.elf) ./examples/*.o tags
-
-# Examples
-
-examples: $(EXAMPLES:=.bin)
-
-exti.elf: ./examples/EXTI_PA0_button.o $(EX_OBJS)
-	$(LD) $^ $(LDFLAGS) -o $@
-	$(SIZE) -A $@
-
-usart.elf: ./examples/USART.o $(EX_OBJS)
-	$(LD) $^ $(LDFLAGS) -o $@
-	$(SIZE) -A $@
-
-adcdma.elf: ./examples/ADC_continuous_DMA.o $(EX_OBJS)
-	$(LD) $^ $(LDFLAGS) -o $@
-	$(SIZE) -A $@
 
 # Hardware specific
 

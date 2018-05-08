@@ -14,96 +14,103 @@ const struct TXBn_REGS TXB[N_TXBUFFERS] = {
         {MCP_TXB2CTRL, MCP_TXB2SIDH, MCP_TXB2DATA}
 };
 
+const struct RXBn_REGS RXB[N_RXBUFFERS] = {
+        {MCP_RXB0CTRL, MCP_RXB0SIDH, MCP_RXB0DATA, CANINTF_RX0IF},
+        {MCP_RXB1CTRL, MCP_RXB1SIDH, MCP_RXB1DATA, CANINTF_RX1IF}
+};
+
 static inline void
-startTransmit() {
+spi_start_cs() {
         LL_GPIO_ResetOutputPin(GPIOA, LL_GPIO_PIN_4);
+
         return;
 }
 
 static inline void
-endTransmit() {
+spi_end_cs() {
         LL_GPIO_SetOutputPin(GPIOA, LL_GPIO_PIN_4);
+
         return;
 }
 
-static inline void
-sendSPI(uint8_t value) {
-        LL_SPI_TransmitData8(SPI1, value);
-        while (!LL_SPI_IsActiveFlag_TXE(SPI1));
-        return;
-}
-
-static inline uint8_t
-recvSPI() {
+static uint8_t
+spi_send(uint8_t value) {
         uint8_t byte;
 
-        byte = LL_SPI_ReceiveData8(SPI1);
-        while (!LL_SPI_IsActiveFlag_RXNE(SPI1))
-        byte = LL_SPI_ReceiveData8(SPI1);
+        LL_SPI_TransmitData8(SPI1, value);
+        while (!LL_SPI_IsActiveFlag_TXE(SPI1));
+        while (LL_SPI_IsActiveFlag_BSY(SPI1));
+
+        while (LL_SPI_IsActiveFlag_RXNE(SPI1))
+                byte = LL_SPI_ReceiveData8(SPI1);
+
         return byte;
 }
 
 static void
-setCANReg(const enum REGISTER reg, const uint8_t value) {
-        startTransmit();
-        sendSPI(INSTRUCTION_WRITE);
-        sendSPI(reg);
-        sendSPI(value);
-        endTransmit();
+can_set_reg(const enum REGISTER reg, const uint8_t value) {
+        spi_start_cs();
+        spi_send(INSTRUCTION_WRITE);
+        spi_send(reg);
+        spi_send(value);
+        spi_end_cs();
+
+        return;
 }
 
 static void
-setCANRegs(const enum REGISTER reg, const uint8_t values[], const uint8_t n) {
+can_set_regs(const enum REGISTER reg, const uint8_t values[], const uint8_t n) {
         uint8_t i;
 
-        startTransmit();
-        sendSPI(INSTRUCTION_WRITE);
-        sendSPI(reg);
+        spi_start_cs();
+        spi_send(INSTRUCTION_WRITE);
+        spi_send(reg);
         for (i = 0; i < n; i++) {
-                sendSPI(values[i]);
+                spi_send(values[i]);
         }
-        endTransmit();
+        spi_end_cs();
+
+        return;
 }
 
 static void
-modifyCANReg(const enum REGISTER reg, const uint8_t mask, const uint8_t data) {
-        startTransmit();
-        sendSPI(INSTRUCTION_BITMOD);
-        sendSPI(reg);
-        sendSPI(mask);
-        sendSPI(data);
-        endTransmit();
+can_modify_reg(const enum REGISTER reg, const uint8_t mask,
+               const uint8_t data) {
+        spi_start_cs();
+        spi_send(INSTRUCTION_BITMOD);
+        spi_send(reg);
+        spi_send(mask);
+        spi_send(data);
+        spi_end_cs();
+
+        return;
 }
 
 static uint8_t
-readCANReg(const enum REGISTER reg) {
+can_read_reg(const enum REGISTER reg) {
         uint8_t ret;
 
-        startTransmit();
-        sendSPI(INSTRUCTION_READ);
-        recvSPI();
-        sendSPI(reg);
-        recvSPI();
-        sendSPI(0x00);
-        ret = recvSPI();
-        endTransmit();
+        spi_start_cs();
+        spi_send(INSTRUCTION_READ);
+        spi_send(reg);
+        ret = spi_send(0x00);
+        spi_end_cs();
 
         return ret;
 }
 
 static void
-readCANRegisters(const enum REGISTER reg, uint8_t values[], const uint8_t n) {
+can_read_regs(const enum REGISTER reg, uint8_t values[], const uint8_t n) {
         uint8_t i;
 
-        startTransmit();
-        sendSPI(INSTRUCTION_READ);
-        sendSPI(reg);
+        spi_start_cs();
+        spi_send(INSTRUCTION_READ);
+        spi_send(reg);
         // mcp2515 has auto-increment of address-pointer
         for (i = 0; i < n; i++) {
-                LL_SPI_TransmitData8(SPI1, 0x00);
-                values[i] = recvSPI();
+                values[i] = spi_send(0x00);
         }
-        endTransmit();
+        spi_end_cs();
 }
 
 static void
@@ -111,41 +118,41 @@ can_reset() {
         int i;
         uint8_t zeros[14] = {0};
 
-        startTransmit();
-        sendSPI(INSTRUCTION_RESET);
-        endTransmit();
+        spi_start_cs();
+        spi_send(INSTRUCTION_RESET);
+        spi_end_cs();
 
         for (i = 0; i < 1000000; i++);
 
-        setCANRegs(MCP_TXB0CTRL, zeros, 14);
-        setCANRegs(MCP_TXB1CTRL, zeros, 14);
-        setCANRegs(MCP_TXB2CTRL, zeros, 14);
+        can_set_regs(MCP_TXB0CTRL, zeros, 14);
+        can_set_regs(MCP_TXB1CTRL, zeros, 14);
+        can_set_regs(MCP_TXB2CTRL, zeros, 14);
 
-        setCANReg(MCP_RXB0CTRL, 0);
-        setCANReg(MCP_RXB1CTRL, 0);
+        can_set_reg(MCP_RXB0CTRL, 0);
+        can_set_reg(MCP_RXB1CTRL, 0);
 
-        setCANReg(MCP_CANINTE, CANINTF_RX0IF | CANINTF_RX1IF |
+        can_set_reg(MCP_CANINTE, CANINTF_RX0IF | CANINTF_RX1IF |
                   CANINTF_ERRIF | CANINTF_MERRF);
 
-        modifyCANReg(MCP_RXB0CTRL, RXBnCTRL_RXM_MASK | RXB0CTRL_BUKT,
-                     RXBnCTRL_RXM_STDEXT | RXB0CTRL_BUKT);
-        modifyCANReg(MCP_RXB1CTRL, RXBnCTRL_RXM_MASK, RXBnCTRL_RXM_STDEXT);
+        can_modify_reg(MCP_RXB0CTRL, RXBnCTRL_RXM_MASK | RXB0CTRL_BUKT,
+                       RXBnCTRL_RXM_STDEXT | RXB0CTRL_BUKT);
+        can_modify_reg(MCP_RXB1CTRL, RXBnCTRL_RXM_MASK, RXBnCTRL_RXM_STDEXT);
         return;
 }
 
 static enum ERROR
-set_can_mode(const enum CANCTRL_REQOP_MODE mode) {
-        modifyCANReg(MCP_CANCTRL, CANCTRL_REQOP, mode);
-
+can_set_mode(const enum CANCTRL_REQOP_MODE mode) {
         uint8_t modeMatch = 0;
         uint32_t timeout = 0;
         uint32_t spin = 0;
         uint8_t newmode = 0;
 
+        can_modify_reg(MCP_CANCTRL, CANCTRL_REQOP, mode);
+
         for (timeout = 0; timeout < 10; timeout++) {
                 for (spin = 0; spin < 1000000; spin++);
 
-                newmode = readCANReg(MCP_CANSTAT);
+                newmode = can_read_reg(MCP_CANSTAT);
                 newmode &= CANSTAT_OPMOD;
 
                 modeMatch = newmode == mode;
@@ -159,10 +166,10 @@ set_can_mode(const enum CANCTRL_REQOP_MODE mode) {
 }
 
 static enum ERROR
-set_can_bitrate(const enum CAN_SPEED canSpeed) {
+can_set_bitrate(const enum CAN_SPEED canSpeed) {
         uint8_t set, cfg1, cfg2, cfg3;
 
-        set_can_mode(CANCTRL_REQOP_CONFIG);
+        can_set_mode(CANCTRL_REQOP_CONFIG);
         set = 1;
 
         switch (canSpeed) {
@@ -242,9 +249,9 @@ set_can_bitrate(const enum CAN_SPEED canSpeed) {
         }
 
         if (set) {
-                setCANReg(MCP_CNF1, cfg1);
-                setCANReg(MCP_CNF2, cfg2);
-                setCANReg(MCP_CNF3, cfg3);
+                can_set_reg(MCP_CNF1, cfg1);
+                can_set_reg(MCP_CNF2, cfg2);
+                can_set_reg(MCP_CNF3, cfg3);
                 return ERROR_OK;
         }
         else {
@@ -270,50 +277,217 @@ can_prepare_id(uint8_t *buffer, const uint8_t ext, const uint32_t id) {
                 buffer[MCP_EID0] = 0;
                 buffer[MCP_EID8] = 0;
         }
+
+        return;
 }
 
 static enum ERROR
 _can_send_msg(const enum TXBn txbn, const struct can_frame *frame) {
         const struct TXBn_REGS *txbuf = &TXB[txbn];
-
-        uint8_t data[13];
+        uint8_t data[13] = {0};
         uint8_t ext = (frame->can_id & CAN_EFF_FLAG);
         uint8_t rtr = (frame->can_id & CAN_RTR_FLAG);
         uint32_t id = (frame->can_id & (ext ? CAN_EFF_MASK : CAN_SFF_MASK));
+        uint8_t req_attempts = REQS_ATTEMPTS;
 
         can_prepare_id(data, ext, id);
-
         data[MCP_DLC] = rtr ? (frame->can_dlc | RTR_MASK) : frame->can_dlc;
-
         memcpy(&data[MCP_DATA], frame->data, frame->can_dlc);
 
-        setCANRegs(txbuf->SIDH, data, 5 + frame->can_dlc);
+        can_set_regs(txbuf->SIDH, data, 5 + frame->can_dlc);
+        can_modify_reg(txbuf->CTRL, TXB_TXREQ, TXB_TXREQ);
 
-        modifyCANReg(txbuf->CTRL, TXB_TXREQ, TXB_TXREQ);
+        while (req_attempts--)
+                if (can_read_reg(txbuf->CTRL) == 0x00)
+                        return ERROR_OK;
 
-        return ERROR_OK;
+        return ERROR_FAILTX;
 }
 
 enum ERROR
 can_send_msg(const struct can_frame *frame) {
+        enum TXBn txBuffers[N_TXBUFFERS] = {TXB0, TXB1, TXB2};
         uint8_t i;
 
         if (frame->can_dlc > CAN_MAX_DLEN) {
                 return ERROR_FAILTX;
         }
 
-        enum TXBn txBuffers[N_TXBUFFERS] = {TXB0, TXB1, TXB2};
-
-
         for (i = 0; i < N_TXBUFFERS; i++) {
                 const struct TXBn_REGS *txbuf = &TXB[txBuffers[i]];
-                uint8_t ctrlval = readCANReg(txbuf->CTRL);
+                uint8_t ctrlval = can_read_reg(txbuf->CTRL);
 
                 if ((ctrlval & TXB_TXREQ) == 0) {
                         return _can_send_msg(txBuffers[i], frame);
                 }
         }
         return ERROR_FAILTX;
+}
+
+static uint8_t
+can_get_status(void) {
+        uint8_t byte;
+
+        spi_start_cs();
+        spi_send(INSTRUCTION_READ_STATUS);
+        byte = spi_send(0x00);
+        spi_end_cs();
+
+        return byte;
+}
+
+static enum ERROR
+_can_read_msg(const enum RXBn rxbn, struct can_frame *frame) {
+        const struct RXBn_REGS *rxb = &RXB[rxbn];
+        uint8_t tbufdata[5];
+        uint32_t id;
+        uint8_t dlc, ctrl;
+
+        can_read_regs(rxb->SIDH, tbufdata, 5);
+        id = (tbufdata[MCP_SIDH] << 3) + (tbufdata[MCP_SIDL] >> 5);
+
+        if ((tbufdata[MCP_SIDL] & TXB_EXIDE_MASK) ==  TXB_EXIDE_MASK) {
+                id = (id << 2) + (tbufdata[MCP_SIDL] & 0x03);
+                id = (id << 8) + tbufdata[MCP_EID8];
+                id = (id << 8) + tbufdata[MCP_EID0];
+                id |= CAN_EFF_FLAG;
+        }
+
+        dlc = (tbufdata[MCP_DLC] & DLC_MASK);
+        if (dlc > CAN_MAX_DLEN) {
+                return ERROR_FAIL;
+        }
+
+        ctrl = can_read_reg(rxb->CTRL);
+        if (ctrl & RXBnCTRL_RTR) {
+                id |= CAN_RTR_FLAG;
+        }
+
+        frame->can_id = id;
+        frame->can_dlc = dlc;
+
+        can_read_regs(rxb->DATA, frame->data, dlc);
+        can_modify_reg(MCP_CANINTF, rxb->CANINTF_RXnIF, 0);
+
+        return ERROR_OK;
+}
+
+enum ERROR
+can_read_msg(struct can_frame *frame) {
+        enum ERROR rc;
+        uint8_t stat = can_get_status();
+
+        if (stat & STAT_RX0IF) {
+                rc = _can_read_msg(RXB0, frame);
+        } else if (stat & STAT_RX1IF) {
+                rc = _can_read_msg(RXB1, frame);
+        } else {
+                rc = ERROR_NOMSG;
+        }
+
+        return rc;
+}
+
+uint8_t
+can_check_new_msg(void) {
+        uint8_t res = can_get_status();
+
+        if (res & STAT_RXIF_MASK) {
+                return 1;
+        } else {
+                return 0;
+        }
+}
+
+static enum ERROR
+_can_set_filter(const enum RXF num, const uint8_t ext, const uint32_t can_id) {
+        enum REGISTER reg;
+        uint8_t tbufdata[4];
+
+        switch (num) {
+        case RXF0:
+                reg = MCP_RXF0SIDH;
+                break;
+        case RXF1:
+                reg = MCP_RXF1SIDH;
+                break;
+        case RXF2:
+                reg = MCP_RXF2SIDH;
+                break;
+        case RXF3:
+                reg = MCP_RXF3SIDH;
+                break;
+        case RXF4:
+                reg = MCP_RXF4SIDH;
+                break;
+        case RXF5:
+                reg = MCP_RXF5SIDH;
+                break;
+        default:
+                return ERROR_FAIL;
+        }
+
+        can_prepare_id(tbufdata, ext, can_id);
+        can_set_regs(reg, tbufdata, 4);
+
+        return ERROR_OK;
+}
+
+static enum ERROR
+_can_set_mask(const enum MASK mask, const uint8_t ext, const uint32_t data) {
+        enum REGISTER reg;
+        uint8_t tbufdata[4];
+
+        switch (mask) {
+        case MASK0:
+                reg = MCP_RXM0SIDH;
+                break;
+        case MASK1:
+                reg = MCP_RXM1SIDH;
+                break;
+        default:
+                return ERROR_FAIL;
+        }
+
+        can_prepare_id(tbufdata, ext, data);
+        can_set_regs(reg, tbufdata, 4);
+
+        return ERROR_OK;
+}
+
+enum ERROR
+can_set_id(uint32_t can_id) {
+        enum ERROR ret;
+
+        if ((ret = can_set_mode(CANCTRL_REQOP_CONFIG)))
+                return ret;
+
+        _can_set_filter(RXF0, 0, can_id);
+        _can_set_filter(RXF1, 0, can_id);
+        _can_set_filter(RXF2, 0, can_id);
+        _can_set_filter(RXF3, 0, can_id);
+        _can_set_filter(RXF4, 0, can_id);
+        _can_set_filter(RXF5, 0, can_id);
+        _can_set_mask(MASK0, 0, 0xFFFF);
+        _can_set_mask(MASK1, 0, 0xFFFF);
+
+        return ERROR_OK;
+}
+
+void
+show_blue_led(void) {
+        LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOC);
+        LL_GPIO_SetPinMode(GPIOC, LL_GPIO_PIN_9, LL_GPIO_MODE_OUTPUT);
+        LL_GPIO_SetOutputPin(GPIOC, LL_GPIO_PIN_9);
+        return;
+}
+
+void
+show_green_led(void) {
+        LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOC);
+        LL_GPIO_SetPinMode(GPIOC, LL_GPIO_PIN_8, LL_GPIO_MODE_OUTPUT);
+        LL_GPIO_SetOutputPin(GPIOC, LL_GPIO_PIN_8);
+        return;
 }
 
 void
@@ -352,21 +526,33 @@ can_core_config(void) {
          * Init CAN
          */
         can_reset();
-        set_can_bitrate(CAN_125KBPS);
-        set_can_mode(CANCTRL_REQOP_NORMAL);
+        can_set_bitrate(CAN_5KBPS);
+        can_set_id(0x69);
+        can_set_mode(CANCTRL_REQOP_NORMAL);
 
         struct can_frame canMsg1;
-        canMsg1.can_id  = 0x123;
-        canMsg1.can_dlc = 5;
+        struct can_frame canMsg2;
+
+        canMsg1.can_id  = 0x71;
+        canMsg1.can_dlc = 6;
         canMsg1.data[0] = 'H';
         canMsg1.data[1] = 'E';
         canMsg1.data[2] = 'L';
         canMsg1.data[3] = 'L';
-        canMsg1.data[4] = 'L';
-        canMsg1.data[5] = 'O';
+        canMsg1.data[4] = 'O';
+        canMsg1.data[5] = '\0';
 
-        if (can_send_msg(&canMsg1) != ERROR_FAILTX)
-                xprintf("Message has been sent\n");
+        int ret;
+        int i;
+        //if (can_send_msg(&canMsg1) != ERROR_FAILTX)
+        //        xprintf("Message has been sent\n");
+        //return;
+prev:
+        xprintf("Waiting for new message\n");
+        while (!can_check_new_msg());
+        can_read_msg(&canMsg2);
+        xprintf("New message! Id: %x msg: %s\n", canMsg2.can_id, canMsg2.data);
+        goto prev;
 
         return;
 }

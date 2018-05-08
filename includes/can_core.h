@@ -105,6 +105,7 @@ static const uint8_t MCP_DLC  = 4;
 static const uint8_t MCP_DATA = 5;
 
 #define N_TXBUFFERS 3
+#define N_RXBUFFERS 2
 
 /*
  * Enumeratons
@@ -301,10 +302,25 @@ struct TXBn_REGS {
         enum REGISTER DATA;
 };
 
+struct RXBn_REGS {
+        enum REGISTER CTRL;
+        enum REGISTER SIDH;
+        enum REGISTER DATA;
+        enum CANINTF  CANINTF_RXnIF;
+};
+
+enum STAT {
+        STAT_RX0IF = (1<<0),
+        STAT_RX1IF = (1<<1)
+};
+
+static const uint8_t STAT_RXIF_MASK = STAT_RX0IF | STAT_RX1IF;
+
 /*
  * Message frame format
  */
 #define CAN_MAX_DLEN 8
+#define REQS_ATTEMPTS 50
 
 struct can_frame {
         canid_t can_id;  /* 32 bit CAN_ID + EFF/RTR/ERR flags */
@@ -315,5 +331,8 @@ struct can_frame {
 void can_core_config(void);
 
 enum ERROR can_send_msg(const struct can_frame *frame);
+enum ERROR can_read_msg(struct can_frame *frame);
+uint8_t can_check_new_msg(void);
+enum ERROR can_set_id(uint32_t can_id);
 
 #endif

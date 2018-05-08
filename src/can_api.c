@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "can_api.h"
-#include "can_core.h"
+#include "can_net.h"
 
 /**
  Please don't edit this file unless you
@@ -27,7 +27,7 @@ void can_do_setup(void (*setup_routine)(void))
 {
     ASSERT(setup_routine);
     memset(&cbcks, 0x00, sizeof(cbcks));
-    can_core_config();
+    net_init(NODE_ID, BRDCST_ID);
     cbcks.setup = setup_routine;
 }
 

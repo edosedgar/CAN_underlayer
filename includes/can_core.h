@@ -328,11 +328,14 @@ struct can_frame {
         uint8_t data[CAN_MAX_DLEN] __attribute__((aligned(8)));
 };
 
-void can_core_config(void);
+uint8_t can_core_config(const enum CAN_SPEED canSpeed);
 
 enum ERROR can_send_msg(const struct can_frame *frame);
+
 enum ERROR can_read_msg(struct can_frame *frame);
+
 uint8_t can_check_new_msg(void);
-enum ERROR can_set_id(uint32_t can_id);
+
+uint8_t can_set_id(uint32_t can_id, uint32_t brdcst_id);
 
 #endif

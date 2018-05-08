@@ -455,23 +455,25 @@ _can_set_mask(const enum MASK mask, const uint8_t ext, const uint32_t data) {
         return ERROR_OK;
 }
 
-enum ERROR
-can_set_id(uint32_t can_id) {
-        enum ERROR ret;
+uint8_t
+can_set_id(uint32_t can_id, uint32_t brdcst_id) {
+        if (can_set_mode(CANCTRL_REQOP_CONFIG))
+                return 1;
 
-        if ((ret = can_set_mode(CANCTRL_REQOP_CONFIG)))
-                return ret;
-
-        _can_set_filter(RXF0, 0, can_id);
+        _can_set_filter(RXF0, 0, brdcst_id);
         _can_set_filter(RXF1, 0, can_id);
         _can_set_filter(RXF2, 0, can_id);
         _can_set_filter(RXF3, 0, can_id);
-        _can_set_filter(RXF4, 0, can_id);
+        _can_set_filter(RXF4, 0, brdcst_id);
         _can_set_filter(RXF5, 0, can_id);
+
         _can_set_mask(MASK0, 0, 0xFFFF);
         _can_set_mask(MASK1, 0, 0xFFFF);
 
-        return ERROR_OK;
+        if (can_set_mode(CANCTRL_REQOP_NORMAL) != ERROR_OK)
+                return 1;
+
+        return 0;
 }
 
 void
@@ -490,8 +492,8 @@ show_green_led(void) {
         return;
 }
 
-void
-can_core_config(void) {
+uint8_t
+can_core_config(const enum CAN_SPEED canSpeed) {
         /*
          * Init GPIO
          */
@@ -526,11 +528,10 @@ can_core_config(void) {
          * Init CAN
          */
         can_reset();
-        can_set_bitrate(CAN_5KBPS);
-        can_set_id(0x69);
-        can_set_mode(CANCTRL_REQOP_NORMAL);
+        if (can_set_bitrate(canSpeed) != ERROR_OK)
+                return 1;
 
-        struct can_frame canMsg1;
+        /*struct can_frame canMsg1;
         struct can_frame canMsg2;
 
         canMsg1.can_id  = 0x71;
@@ -552,7 +553,6 @@ prev:
         while (!can_check_new_msg());
         can_read_msg(&canMsg2);
         xprintf("New message! Id: %x msg: %s\n", canMsg2.can_id, canMsg2.data);
-        goto prev;
-
-        return;
+        goto prev;*/
+        return 0;
 }

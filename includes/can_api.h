@@ -8,6 +8,9 @@
  know what you do
  */
 
+#define NODE_ID 0x71
+#define BRDCST_ID 0
+
 enum { MAX_SENSORS_NUMBER = 10 };
 enum { MAX_NAME_LENGTH    = 64 };
 enum { MAX_JSON_LENGTH    = 256 };

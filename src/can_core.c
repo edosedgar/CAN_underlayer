@@ -517,28 +517,5 @@ can_core_config(const enum CAN_SPEED canSpeed) {
         if (can_set_bitrate(canSpeed) != ERROR_OK)
                 return 1;
 
-        /*struct can_frame canMsg1;
-        struct can_frame canMsg2;
-
-        canMsg1.can_id  = 0x71;
-        canMsg1.can_dlc = 6;
-        canMsg1.data[0] = 'H';
-        canMsg1.data[1] = 'E';
-        canMsg1.data[2] = 'L';
-        canMsg1.data[3] = 'L';
-        canMsg1.data[4] = 'O';
-        canMsg1.data[5] = '\0';
-
-        int ret;
-        int i;
-        //if (can_send_msg(&canMsg1) != ERROR_FAILTX)
-        //        xprintf("Message has been sent\n");
-        //return;
-prev:
-        xprintf("Waiting for new message\n");
-        while (!can_check_new_msg());
-        can_read_msg(&canMsg2);
-        xprintf("New message! Id: %x msg: %s\n", canMsg2.can_id, canMsg2.data);
-        goto prev;*/
         return 0;
 }

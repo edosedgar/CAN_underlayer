@@ -91,7 +91,7 @@ uint8_t net_poll();
 uint8_t net_node_num();
 
 /*
- * Call this routine to make sure that the node is joined network
+ * Call this routine to make sure that the node joined network
  */
 uint8_t net_wait_join();
 

@@ -320,13 +320,13 @@ static const uint8_t STAT_RXIF_MASK = STAT_RX0IF | STAT_RX1IF;
  * Message frame format
  */
 #define CAN_MAX_DLEN 8
-#define REQS_ATTEMPTS 50
+#define REQS_ATTEMPTS 100
 
 struct can_frame {
         canid_t can_id;  /* 32 bit CAN_ID + EFF/RTR/ERR flags */
         uint8_t can_dlc; /* frame payload length in byte (0 .. CAN_MAX_DLEN) */
-        uint8_t data[CAN_MAX_DLEN] __attribute__((aligned(8)));
-};
+        uint8_t data[CAN_MAX_DLEN];
+} __attribute__((packed));
 
 uint8_t can_core_config(const enum CAN_SPEED canSpeed);
 

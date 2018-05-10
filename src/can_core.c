@@ -284,7 +284,7 @@ can_prepare_id(uint8_t *buffer, const uint8_t ext, const uint32_t id) {
 static enum ERROR
 _can_send_msg(const enum TXBn txbn, const struct can_frame *frame) {
         const struct TXBn_REGS *txbuf = &TXB[txbn];
-        uint8_t data[13] = {0};
+        uint8_t data[13];
         uint8_t ext = (frame->can_id & CAN_EFF_FLAG);
         uint8_t rtr = (frame->can_id & CAN_RTR_FLAG);
         uint32_t id = (frame->can_id & (ext ? CAN_EFF_MASK : CAN_SFF_MASK));
@@ -297,11 +297,13 @@ _can_send_msg(const enum TXBn txbn, const struct can_frame *frame) {
         can_set_regs(txbuf->SIDH, data, 5 + frame->can_dlc);
         can_modify_reg(txbuf->CTRL, TXB_TXREQ, TXB_TXREQ);
 
-        while (req_attempts--)
-                if (can_read_reg(txbuf->CTRL) == 0x00)
-                        return ERROR_OK;
+        //while (req_attempts--)
+        //        if (can_read_reg(txbuf->CTRL) == 0x00)
+        //                return ERROR_OK;
+        //
+        //xprintf("       Sent with ret code: %02X\n",can_read_reg(txbuf->CTRL));
 
-        return ERROR_FAILTX;
+        return ERROR_OK;
 }
 
 enum ERROR
@@ -474,22 +476,6 @@ can_set_id(uint32_t can_id, uint32_t brdcst_id) {
                 return 1;
 
         return 0;
-}
-
-void
-show_blue_led(void) {
-        LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOC);
-        LL_GPIO_SetPinMode(GPIOC, LL_GPIO_PIN_9, LL_GPIO_MODE_OUTPUT);
-        LL_GPIO_SetOutputPin(GPIOC, LL_GPIO_PIN_9);
-        return;
-}
-
-void
-show_green_led(void) {
-        LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOC);
-        LL_GPIO_SetPinMode(GPIOC, LL_GPIO_PIN_8, LL_GPIO_MODE_OUTPUT);
-        LL_GPIO_SetOutputPin(GPIOC, LL_GPIO_PIN_8);
-        return;
 }
 
 uint8_t

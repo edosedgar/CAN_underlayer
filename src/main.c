@@ -9,22 +9,19 @@
 
 #include "xprintf.h"
 
-void config_RCC(void);
-void config_USART(void);
-char usart_getc(void);
-void usart_putc(char symbol);
+char
+usart_getc(void) {
+        char byte;
 
-int
-main(void) {
-        config_RCC();
-        config_USART();
+        if (LL_USART_IsActiveFlag_RXNE(USART1))
+                byte = LL_USART_ReceiveData8(USART1);
+        return byte;
+}
 
-        (void)can_do_setup(my_setup);
-        (void)can_add_get("PC8", get_PC8);
-        (void)can_do_loop(my_loop);
-
-        while (1);
-        return 0;
+void
+usart_putc(char symbol) {
+        LL_USART_TransmitData8(USART1, symbol);
+        while (!LL_USART_IsActiveFlag_TC(USART1));
 }
 
 void
@@ -64,21 +61,6 @@ config_USART() {
         xdev_out(usart_putc);
         xdev_in(usart_getc);
         return;
-}
-
-char
-usart_getc(void) {
-        char byte;
-
-        if (LL_USART_IsActiveFlag_RXNE(USART1))
-                byte = LL_USART_ReceiveData8(USART1);
-        return byte;
-}
-
-void
-usart_putc(char symbol) {
-        LL_USART_TransmitData8(USART1, symbol);
-        while (!LL_USART_IsActiveFlag_TC(USART1));
 }
 
 /**
@@ -124,4 +106,17 @@ config_RCC() {
         /* Update CMSIS variable (which can be updated also
          * through SystemCoreClockUpdate function) */
         SystemCoreClock = 48000000;
+}
+
+int
+main(void) {
+        config_RCC();
+        config_USART();
+
+        (void)can_do_setup(my_setup);
+        //(void)can_add_get("PC8", get_PC8);
+        //(void)can_do_loop(my_loop);
+
+        while (1);
+        return 0;
 }

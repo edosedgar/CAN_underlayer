@@ -9,7 +9,7 @@
 
 #include <string.h>
 
-#define DEBUG
+//#define DEBUG
 
 #ifdef DEBUG
 #define assert(cond) \
@@ -18,7 +18,7 @@
                 *(uint8_t *)0x08000001 = 0x00; \
         }
 #else
-#define assert(cond) (cond)
+#define assert(cond) (void)(cond)
 #endif
 
 static struct can_frame can_pack;
@@ -27,6 +27,7 @@ static struct net_frame net_pack;
 static uint32_t node_id;
 static struct net_state net_st = {0};
 static struct net_rx_state net_rx_st = {0};
+static struct net_tx_state net_tx_st = {0};
 
 static void
 embed_net_pack(uint16_t dest_id) {
@@ -86,9 +87,41 @@ net_del_id(uint32_t id) {
         return 1;
 }
 
+static uint8_t
+net_is_node_active(uint32_t id) {
+        int i = 0;
+
+        for (i = 0; i < MAX_NODE; i++) {
+                if (net_st.nodes[i] == id) {
+                        return 0;
+                }
+        }
+
+        return 1;
+}
+
 uint8_t
 net_node_num() {
+
         return net_st.active_node;
+}
+
+uint32_t
+net_get_id(uint8_t id_num) {
+        int i = 0;
+        uint16_t id;
+        uint8_t id_counter = 0;
+
+        for (i = 0; i < MAX_NODE; i++) {
+                if (net_st.nodes[i] != 0) {
+                        if (id_num == id_counter) {
+                                return net_st.nodes[i];
+                        }
+                        id_counter++;
+                }
+        }
+
+        return 0;
 }
 
 void
@@ -153,7 +186,7 @@ net_fsm() {
         }
         if (fr_type == NET_SYNCED) {
                 net_add_id(new_id);
-                //xprintf("Node with ID: 0x%04x synced!\n", new_id);
+                xprintf("Node with ID: 0x%04x synced!\n", new_id);
         }
         if (fr_type == NET_PING) {
                 net_header_fill(node_id, NET_PING_OK, 0);
@@ -270,47 +303,163 @@ net_poll() {
                 net_ping_check(ret);
                 break;
         }
-        case ST_RECV: {
+        case ST_RECV_INIT: {
                 ret = net_fsm();
+                net_ping_check(ret);
                 // Handle the first frame
-                if (ret == NET_SEND_INIT && !net_rx_st.offset) {
+                if (ret == NET_SEND_INIT) {
                         net_rx_st.size = net_pack.frame_size;
                         net_rx_st.source_id = net_pack.source_id;
-                        net_st.recv_wait_ms = 0;
                         memcpy(net_rx_st.buffer + net_rx_st.offset,
                                net_pack.payload, FRAME_PCAP);
-                        net_rx_st.offset += FRAME_PCAP;
-                }
-                // Handle successively the following frames
-                if (ret == NET_SEND &&
-                    net_pack.source_id == net_rx_st.source_id) {
+                        net_rx_st.offset = FRAME_PCAP;
+                        net_st.status = ST_RECV_INIT_ACK;
                         net_st.recv_wait_ms = 0;
-                        memcpy(net_rx_st.buffer + net_rx_st.offset,
-                               net_pack.payload, FRAME_PCAP);
-                        net_rx_st.offset += FRAME_PCAP;
-                }
-                // Check for the completion of data receiving
-                if (net_rx_st.offset) {
-                        if (net_rx_st.offset >= net_rx_st.size) {
-                                net_header_fill(node_id, NET_SEND_ACK, 0);
-                                embed_net_pack(net_rx_st.source_id);
-                                assert(!can_send_msg(&can_pack));
-
-                                net_rx_st.is_rx_filled = 1;
-                                net_rx_st.is_wait = 0;
-                                net_st.recv_wait_ms = 0;
-                                net_st.status = ST_READY;
-                         }
                 }
                 // Constant timeout check
                 net_st.recv_wait_ms++;
                 if (net_st.recv_wait_ms >= RECV_TIMEOUT_MS) {
                         net_rx_st.is_rx_filled = 1;
                         net_rx_st.is_wait = 0;
-                        net_st.recv_wait_ms = 0;
+                        net_rx_st.offset = 0;
                         net_rx_st.is_timeout = 1;
+
+                        net_st.recv_wait_ms = 0;
                         net_st.status = ST_READY;
                 }
+                break;
+        }
+        case ST_RECV_INIT_ACK: {
+                ret = net_fsm();
+                net_ping_check(ret);
+
+                net_header_fill(node_id, NET_SEND_INIT_ACK, 0);
+                embed_net_pack(net_rx_st.source_id);
+                assert(!can_send_msg(&can_pack));
+                net_st.status = ST_RECV;
+
+                break;
+        }
+        case ST_RECV: {
+                ret = net_fsm();
+                net_ping_check(ret);
+
+                // Handle successively the following frames
+                if ((ret == NET_SEND) &&
+                    (net_pack.source_id == net_rx_st.source_id)) {
+                        net_st.recv_wait_ms = 0;
+                        memcpy(net_rx_st.buffer + net_rx_st.offset,
+                               net_pack.payload, FRAME_PCAP);
+                        net_rx_st.offset += FRAME_PCAP;
+                        net_st.status = ST_RECV_ACK;
+                }
+                // Constant timeout check
+                net_st.recv_wait_ms++;
+                if (net_st.recv_wait_ms >= RECV_TIMEOUT_MS) {
+                        net_rx_st.is_rx_filled = 1;
+                        net_rx_st.is_wait = 0;
+                        net_rx_st.offset = 0;
+                        net_rx_st.source_id = 0;
+                        net_rx_st.is_timeout = 1;
+
+                        net_st.recv_wait_ms = 0;
+                        net_st.status = ST_READY;
+                }
+
+                break;
+        }
+        case ST_RECV_ACK: {
+                ret = net_fsm();
+                net_ping_check(ret);
+
+                net_header_fill(node_id, NET_SEND_ACK, 0);
+                embed_net_pack(net_rx_st.source_id);
+                assert(!can_send_msg(&can_pack));
+
+                net_st.status = ST_RECV;
+                // Check for the completion of data receiving
+                if (net_rx_st.offset >= net_rx_st.size) {
+                        net_rx_st.is_rx_filled = 1;
+                        net_rx_st.is_wait = 0;
+                        net_rx_st.offset = 0;
+
+                        net_st.recv_wait_ms = 0;
+                        net_st.status = ST_READY;
+                }
+
+                break;
+        }
+        case ST_SEND_INIT: {
+                ret = net_fsm();
+                net_ping_check(ret);
+
+                memcpy(net_pack.payload, net_tx_st.buffer, FRAME_PCAP);
+                net_header_fill(node_id, NET_SEND_INIT, net_tx_st.size);
+                embed_net_pack(net_tx_st.rec_id);
+                assert(!can_send_msg(&can_pack));
+
+                net_tx_st.is_timeout = 0;
+                net_tx_st.offset = FRAME_PCAP;
+                net_st.status = ST_SEND_INIT_ACK;
+                net_st.send_wait_ms = 0;
+
+                break;
+        }
+        case ST_SEND_INIT_ACK: {
+                ret = net_fsm();
+                net_ping_check(ret);
+
+                if (ret == NET_SEND_INIT_ACK) {
+                        net_st.send_wait_ms = 0;
+                        net_st.status = ST_SEND;
+                }
+                // Constant timeout check
+                net_st.send_wait_ms++;
+                if (net_st.send_wait_ms >= SEND_TIMEOUT_MS) {
+                        net_tx_st.is_tx_done = 1;
+                        net_tx_st.is_timeout = 1;
+                        net_st.send_wait_ms = 0;
+                        net_st.status = ST_READY;
+                }
+
+                break;
+        }
+        case ST_SEND: {
+                ret = net_fsm();
+                net_ping_check(ret);
+
+                memcpy(net_pack.payload,
+                       net_tx_st.buffer + net_tx_st.offset, FRAME_PCAP);
+                net_tx_st.offset += FRAME_PCAP;
+                net_header_fill(node_id, NET_SEND, FRAME_PCAP);
+                embed_net_pack(net_tx_st.rec_id);
+                assert(!can_send_msg(&can_pack));
+                net_st.status = ST_SEND_ACK;
+
+                break;
+        }
+        case ST_SEND_ACK: {
+                ret = net_fsm();
+                net_ping_check(ret);
+
+                if (ret == NET_SEND_ACK) {
+                        if (net_tx_st.offset >= net_tx_st.size) {
+                                net_st.send_wait_ms = 0;
+                                net_tx_st.is_tx_done = 1;
+                                net_st.status = ST_READY;
+                        } else {
+                                net_st.status = ST_SEND;
+                        }
+                }
+                // Constant timeout check
+                net_st.send_wait_ms++;
+                if (net_st.send_wait_ms >= SEND_TIMEOUT_MS) {
+                        net_tx_st.is_tx_done = 1;
+                        net_tx_st.is_timeout = 1;
+                        net_st.send_wait_ms = 0;
+                        net_st.status = ST_READY;
+                }
+
                 break;
         }
         }
@@ -320,8 +469,8 @@ net_poll() {
 
 uint32_t
 net_recv(uint8_t *buf, uint8_t recv_flag) {
-        // Return is data is requested but is not obtained
-        if (net_rx_st.is_wait) {
+        //Return 0 if data is requested but is not obtained
+        if (net_rx_st.is_wait || net_st.status != ST_READY) {
                 return 0;
         }
         //Return data obtained
@@ -333,15 +482,18 @@ net_recv(uint8_t *buf, uint8_t recv_flag) {
         }
         //Request in synchronous mode
         if (recv_flag == RECV_BLOCK) {
-                net_st.status = ST_RECV;
+                net_st.status = ST_RECV_INIT;
                 net_rx_st.is_wait = 1;
                 net_rx_st.buffer = buf;
                 while (net_rx_st.is_wait);
+                net_rx_st.is_rx_filled = 0;
+                if (net_rx_st.is_timeout)
+                        return 1;
                 return (net_rx_st.source_id << 16) | net_rx_st.size;
         }
         //Requst in asynchronous mode
         if (recv_flag == RECV_POLL) {
-                net_st.status = ST_RECV;
+                net_st.status = ST_RECV_INIT;
                 net_rx_st.is_wait = 1;
                 net_rx_st.buffer = buf;
                 net_rx_st.is_rx_filled = 0;
@@ -351,11 +503,26 @@ net_recv(uint8_t *buf, uint8_t recv_flag) {
         return 0;
 }
 
-uint8_t
-net_send(uint8_t *buf, uint8_t size, uint8_t ack, uint16_t recipient_id) {
-        if (net_rx_st.is_wait)
-                return 0;
-        //Don't allow to send while rx is busy
-        return 0;
+uint16_t
+net_send(uint8_t *buf, uint8_t size, uint16_t recipient_id) {
+        //Don't allow net_send to be executed while rx is busy
+        if (net_rx_st.is_wait || net_st.status != ST_READY)
+                return RET_INVAL;
+        /* The data can be transmitted only to active node. The active node
+           list is sustained automatically by ping mechanism */
+        if (net_is_node_active(recipient_id) || !size)
+                return RET_INVAL;
+
+        net_tx_st.rec_id = recipient_id;
+        net_tx_st.size = size;
+        net_tx_st.buffer = buf;
+        net_st.status = ST_SEND_INIT;
+        net_tx_st.is_tx_done = 0;
+
+        while (!net_tx_st.is_tx_done);
+        if (net_tx_st.is_timeout)
+                return RET_TIMEOUT;
+
+        return size;
 }
 #undef assert

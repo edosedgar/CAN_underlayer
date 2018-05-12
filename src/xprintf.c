@@ -19,6 +19,7 @@
 /-------------------------------------------------------------------------*/
 
 #include "xprintf.h"
+#include "stm32f0xx_ll_system.h"
 
 
 #if _USE_XFUNC_OUT
@@ -205,12 +206,14 @@ void xprintf (                  /* Put a formatted string to the default device 
         ...                                     /* Optional arguments */
 )
 {
+        __disable_irq();
         va_list arp;
 
 
         va_start(arp, fmt);
         xvprintf(fmt, arp);
         va_end(arp);
+        __enable_irq();
 }
 
 

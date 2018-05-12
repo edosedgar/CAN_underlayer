@@ -27,14 +27,31 @@ struct cbcks_s cbcks;
 
 void
 can_do_setup(void (*setup_routine)(void)) {
+        uint8_t array[] = "Hello world!\n";
+        uint8_t array2[20];
+        int ret = 0, num_node, id = 0;
+
         ASSERT(setup_routine);
         memset(&cbcks, 0x00, sizeof(cbcks));
         net_init();
         net_start();
         if (net_wait_join())
                 xprintf("Node is joined. Active nodes: %d\n", net_node_num());
-        else
-                xprintf("Node is not joined\n");
+        /*while (!(0xFF & ret)) {
+                num_node = net_node_num();
+                if (num_node) {
+                        id = net_get_id(0);
+                        ret = net_send(array, sizeof(array), id);
+                        xprintf("net_send ended up with %04X code \n", ret);
+                }
+        }
+        return;*/
+        while (1) {
+                ret = net_recv(array2, RECV_BLOCK);
+                xprintf("Msg received(ret = %02X): %s\n", ret, array2);
+                memset(array2, 0, 20);
+        }
+
         cbcks.setup = setup_routine;
 }
 

@@ -23,11 +23,12 @@
 
 static struct can_frame can_pack;
 static struct net_frame net_pack;
+/* Actually all nodes have only 16bit ID */
 static uint32_t node_id;
 static struct net_state net_st = {0};
 
 static void
-embed_net_pack(uint8_t dest_id) {
+embed_net_pack(uint16_t dest_id) {
         can_pack.can_id = dest_id;
         can_pack.can_dlc = CAN_MAX_DLEN;
         memcpy(&(can_pack.data), &net_pack, CAN_MAX_DLEN);
@@ -43,7 +44,7 @@ unload_net_pack() {
 }
 
 static void
-net_header_fill(uint8_t id, uint8_t type, uint8_t size) {
+net_header_fill(uint16_t id, uint8_t type, uint8_t size) {
         net_pack.source_id = id;
         net_pack.frame_type = type;
         net_pack.frame_size = size;
@@ -75,7 +76,7 @@ net_del_id(uint32_t id) {
 
         for (i = 0; i < MAX_NODE; i++) {
                 if (net_st.nodes[i] == id) {
-                        net_st.nodes[i] = 0x00;
+                        net_st.nodes[i] = 0x0000;
                         net_st.active_node -= 1;
                         return 0;
                 }
@@ -108,8 +109,9 @@ net_init() {
         int i;
 
         node_id = LL_GetUID_Word0();
-        node_id = 0xFF & ((node_id >> 8) ^ node_id);
-        xprintf("CoreID 0x%02X\n", node_id);
+        node_id |= node_id >> 8;
+        node_id &= 0xFFFF;
+        xprintf("CoreID 0x%04X\n", node_id);
 
         assert(!can_core_config(CAN_50KBPS));
         assert(!can_set_id(node_id, BRDCST_ID));
@@ -140,17 +142,17 @@ net_fsm() {
 
         if (fr_type == NET_JOIN_ACK) {
                 net_add_id(new_id);
-                //xprintf("Get acknowledgment from ID: 0x%02x\n", new_id);
+                //xprintf("Get acknowledgment from ID: 0x%04x\n", new_id);
         }
         if (fr_type == NET_JOIN) {
                 net_header_fill(node_id, NET_JOIN_ACK, 0);
                 embed_net_pack(new_id);
                 assert(!can_send_msg(&can_pack));
-                //xprintf("New node! ID: 0x%02x\n", new_id);
+                //xprintf("New node! ID: 0x%04x\n", new_id);
         }
         if (fr_type == NET_SYNCED) {
                 net_add_id(new_id);
-                //xprintf("Node with ID: 0x%02x synced!\n", new_id);
+                //xprintf("Node with ID: 0x%04x synced!\n", new_id);
         }
         if (fr_type == NET_PING) {
                 net_header_fill(node_id, NET_PING_OK, 0);
@@ -193,7 +195,7 @@ net_ping_check(uint8_t fsm_ret) {
         }
 
         if (net_st.sync_timeout >= PING_PERIOD_MS) {
-                xprintf("Node ID 0x%02x has gone\n", net_st.wait_ping);
+                xprintf("Node ID 0x%04x has gone\n", net_st.wait_ping);
                 net_st.sync_timeout = 0;
                 net_del_id(net_st.wait_ping);
                 if (!net_st.active_node) {
@@ -209,7 +211,7 @@ net_ping_check(uint8_t fsm_ret) {
         }
 
         if (flag && (net_st.sync_timeout > PING_DELAY)) {
-                xprintf("Ping! ID: 0x%02x\n", net_st.wait_ping);
+                xprintf("Ping! ID: 0x%04x\n", net_st.wait_ping);
                 net_header_fill(node_id, NET_PING, 0);
                 embed_net_pack(net_st.wait_ping);
                 assert(!can_send_msg(&can_pack));
@@ -273,13 +275,13 @@ net_poll() {
 }
 
 uint32_t
-net_recv(uint32_t *buf, uint8_t blocked) {
+net_recv(uint8_t *buf, uint8_t blocked) {
         //
         return 0;
 }
 
 uint8_t
-net_send(uint32_t *buf, uint8_t size, uint8_t ack, uint32_t recipient_id) {
+net_send(uint8_t *buf, uint8_t size, uint8_t ack, uint16_t recipient_id) {
         //
         return 0;
 }

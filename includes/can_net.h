@@ -4,8 +4,8 @@
 #define JOIN_PHASE_1 1
 #define JOIN_PHASE_2 2
 
-#define BRDCST_ID 0x71
-#define MAX_NODE 0x80
+#define BRDCST_ID 0x00
+#define MAX_NODE 0x20
 
 #define SYNC_TIMEOUT_MAX 3000
 #define PING_PERIOD_MS   1000
@@ -30,16 +30,16 @@ enum FRAME_T {
 };
 
 struct net_frame {
-        uint8_t source_id;
+        uint16_t source_id;
         uint8_t frame_type;
         uint8_t frame_size;
-        uint8_t payload[5];
+        uint8_t payload[4];
 } __attribute__((packed));
 
 struct net_state {
         uint8_t active_node;
         uint8_t status;
-        uint8_t nodes[MAX_NODE];
+        uint16_t nodes[MAX_NODE];
         uint32_t poll_en;
         uint32_t sync_timeout;
         uint32_t wait_ping;
@@ -67,16 +67,15 @@ void net_start();
  *          | 16bit | 16bit |
  * RETVAL = |  ID   | SIZE  |
  */
-uint32_t net_recv(uint32_t *buf, uint8_t blocked);
+uint32_t net_recv(uint8_t *buf, uint8_t blocked);
 
 /*
  * To send data to recipient ID.
- * Size units are bytes regardless of 32bitness of buffer
- * If ack is flagges, subroutine will wait for receive
+ * If ack is flagged, subroutine will wait for receive
  * confirmation from recipient endpoint
  */
-uint8_t net_send(uint32_t *buf, uint8_t size, uint8_t ack,
-                 uint32_t recipient_id);
+uint8_t net_send(uint8_t *buf, uint8_t size, uint8_t ack,
+                 uint16_t recipient_id);
 
 /*
  * This net_poll implements the main algorithm of communication,

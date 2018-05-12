@@ -109,7 +109,6 @@ net_node_num() {
 uint32_t
 net_get_id(uint8_t id_num) {
         int i = 0;
-        uint16_t id;
         uint8_t id_counter = 0;
 
         for (i = 0; i < MAX_NODE; i++) {

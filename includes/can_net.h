@@ -1,9 +1,6 @@
 #ifndef CAN_NET_H
 #define CAN_NET_H
 
-#define JOIN_PHASE_1 1
-#define JOIN_PHASE_2 2
-
 #define BRDCST_ID 0x00
 #define MAX_NODE 0x20
 
@@ -11,29 +8,45 @@
 #define PING_PERIOD_MS   1000
 #define PING_DELAY       100
 
+#define RECV_TIMEOUT_MS  500
+
+#define FRAME_PCAP       4
+
+enum FRAME_T {
+        NET_JOIN        = 0x01,
+        NET_JOIN_ACK    = 0x02,
+        NET_SYNCED      = 0x03,
+        NET_PING        = 0x04,
+        NET_PING_OK     = 0x05,
+        NET_SEND_INIT   = 0x06,
+        NET_SEND        = 0x07
+};
+
 enum NODE_STATUS_T {
         ST_RESET,
         ST_WAIT_JOIN,
         ST_JOINED,
         ST_SYNCED,
         ST_READY,
-        ST_READ,
+        ST_RECV,
         ST_WRITE
 };
 
-enum FRAME_T {
-        NET_JOIN        = 0x00,
-        NET_JOIN_ACK    = 0x01,
-        NET_SYNCED      = 0x02,
-        NET_PING        = 0x03,
-        NET_PING_OK     = 0x04
+enum SEND_T {
+        ACK_YES,
+        ACK_NO
+};
+
+enum RECV_T {
+        RECV_BLOCK,
+        RECV_POLL
 };
 
 struct net_frame {
         uint16_t source_id;
         uint8_t frame_type;
         uint8_t frame_size;
-        uint8_t payload[4];
+        uint8_t payload[FRAME_PCAP];
 } __attribute__((packed));
 
 struct net_state {
@@ -43,6 +56,17 @@ struct net_state {
         uint32_t poll_en;
         uint32_t sync_timeout;
         uint32_t wait_ping;
+        uint32_t recv_wait_ms;
+};
+
+struct net_rx_state {
+        uint32_t source_id;
+        uint8_t is_rx_filled;
+        uint8_t is_wait;
+        uint8_t is_timeout;
+        uint8_t size;
+        uint8_t *buffer;
+        uint8_t offset;
 };
 
 /*

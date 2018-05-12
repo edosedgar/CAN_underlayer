@@ -13,10 +13,10 @@
 
 #ifdef DEBUG
 #define assert(cond) \
-    if (!(cond)) { \
-            xprintf("%s failed in %d line\n", #cond, __LINE__ ); \
-            *(uint8_t *)0x08000001 = 0x00; \
-    }
+        if (!(cond)) { \
+                xprintf("%s failed in %d line\n", #cond, __LINE__ ); \
+                *(uint8_t *)0x08000001 = 0x00; \
+        }
 #else
 #define assert(cond) (cond)
 #endif
@@ -273,15 +273,17 @@ net_poll() {
         case ST_RECV: {
                 ret = net_fsm();
                 // Handle the first frame
-                if (ret == NET_SEND_INIT) {
+                if (ret == NET_SEND_INIT && !net_rx_st.offset) {
                         net_rx_st.size = net_pack.frame_size;
+                        net_rx_st.source_id = net_pack.source_id;
                         net_st.recv_wait_ms = 0;
                         memcpy(net_rx_st.buffer + net_rx_st.offset,
                                net_pack.payload, FRAME_PCAP);
                         net_rx_st.offset += FRAME_PCAP;
                 }
                 // Handle successively the following frames
-                if (ret == NET_SEND) {
+                if (ret == NET_SEND &&
+                    net_pack.source_id == net_rx_st.source_id) {
                         net_st.recv_wait_ms = 0;
                         memcpy(net_rx_st.buffer + net_rx_st.offset,
                                net_pack.payload, FRAME_PCAP);
@@ -290,6 +292,10 @@ net_poll() {
                 // Check for the completion of data receiving
                 if (net_rx_st.offset) {
                         if (net_rx_st.offset >= net_rx_st.size) {
+                                net_header_fill(node_id, NET_SEND_ACK, 0);
+                                embed_net_pack(net_rx_st.source_id);
+                                assert(!can_send_msg(&can_pack));
+
                                 net_rx_st.is_rx_filled = 1;
                                 net_rx_st.is_wait = 0;
                                 net_st.recv_wait_ms = 0;
@@ -318,7 +324,7 @@ net_recv(uint8_t *buf, uint8_t recv_flag) {
         if (net_rx_st.is_wait) {
                 return 0;
         }
-        // Return data obtained
+        //Return data obtained
         if (net_rx_st.is_rx_filled) {
                 net_rx_st.is_rx_filled = 0;
                 if (net_rx_st.is_timeout)
@@ -347,6 +353,8 @@ net_recv(uint8_t *buf, uint8_t recv_flag) {
 
 uint8_t
 net_send(uint8_t *buf, uint8_t size, uint8_t ack, uint16_t recipient_id) {
+        if (net_rx_st.is_wait)
+                return 0;
         //Don't allow to send while rx is busy
         return 0;
 }

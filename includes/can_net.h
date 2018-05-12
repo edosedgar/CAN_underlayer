@@ -19,7 +19,8 @@ enum FRAME_T {
         NET_PING        = 0x04,
         NET_PING_OK     = 0x05,
         NET_SEND_INIT   = 0x06,
-        NET_SEND        = 0x07
+        NET_SEND        = 0x07,
+        NET_SEND_ACK    = 0x08
 };
 
 enum NODE_STATUS_T {
@@ -84,19 +85,27 @@ void net_start();
 /*
  * The data sent to the node (ID) can be obtained via
  * that subroutine.
- * The *blocked* parameter specifies whether it is required
- * to wait for data or not
- * The highest two bytes of return value are *source ID*,
- * the lowest two bytes are *size of payload*
+ * The *recv_flag* parameter specifies whether it is required
+ * to wait for data or not:
+ *      RECV_BLOCK: spin in the subroutine until data is received
+ *      RECV_POLL: initiate request to accept data
+ *              The subroutine can be reentered, so:
+ *              If data is being received the net_recv return 0
+ *              Once timeout happens, the net_recv exits with 1
+ * After successfull receive, the highest two bytes of return
+ * value are *source ID*, the lowest two bytes are *size of payload*
+ *
  *          | 16bit | 16bit |
  * RETVAL = |  ID   | SIZE  |
  */
-uint32_t net_recv(uint8_t *buf, uint8_t blocked);
+uint32_t net_recv(uint8_t *buf, uint8_t recv_flag);
 
 /*
  * To send data to recipient ID.
  * If ack is flagged, subroutine will wait for receive
  * confirmation from recipient endpoint
+ * NOTE: if net_recv has been called before hasn't still
+ *       finished the net_send will end up with 0 exit code
  */
 uint8_t net_send(uint8_t *buf, uint8_t size, uint8_t ack,
                  uint16_t recipient_id);

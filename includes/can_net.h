@@ -135,7 +135,7 @@ uint32_t net_recv(uint8_t *buf, uint8_t recv_flag);
 
 /*
  * To send data to recipient ID.
- * NOTE: if net_recv has been called before hasn't still
+ * NOTE: if net_send has been called before net_recv hasn't
  *       finished the net_send will end up with RET_BUSY exit code
  * NOTE: The recipient_id should be only active node ID,
  *       broadcast message is also not permitted

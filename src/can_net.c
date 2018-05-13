@@ -244,7 +244,7 @@ net_ping_check(uint8_t fsm_ret) {
         }
 
         if (flag && (net_st.sync_timeout > PING_DELAY)) {
-                xprintf("Ping! ID: 0x%04x\n", net_st.wait_ping);
+                //xprintf("Ping! ID: 0x%04x\n", net_st.wait_ping);
                 net_header_fill(node_id, NET_PING, 0);
                 embed_net_pack(net_st.wait_ping);
                 assert(!can_send_msg(&can_pack));

@@ -11,10 +11,11 @@
 
 char
 usart_getc(void) {
-        char byte;
+        uint8_t byte;
 
-        if (LL_USART_IsActiveFlag_RXNE(USART1))
-                byte = LL_USART_ReceiveData8(USART1);
+        while (!LL_USART_IsActiveFlag_RXNE(USART1))
+        byte = LL_USART_ReceiveData8(USART1);
+
         return byte;
 }
 

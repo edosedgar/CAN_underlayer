@@ -59,7 +59,8 @@ can_set_reg(const enum REGISTER reg, const uint8_t value) {
 }
 
 static void
-can_set_regs(const enum REGISTER reg, const uint8_t values[], const uint8_t n) {
+can_set_regs(const enum REGISTER reg, const uint8_t values[],
+             const uint8_t n) {
         uint8_t i;
 
         spi_start_cs();
@@ -288,7 +289,7 @@ _can_send_msg(const enum TXBn txbn, const struct can_frame *frame) {
         uint8_t ext = (frame->can_id & CAN_EFF_FLAG);
         uint8_t rtr = (frame->can_id & CAN_RTR_FLAG);
         uint32_t id = (frame->can_id & (ext ? CAN_EFF_MASK : CAN_SFF_MASK));
-        uint8_t req_attempts = REQS_ATTEMPTS;
+        //uint8_t req_attempts = REQS_ATTEMPTS;
 
         can_prepare_id(data, ext, id);
         data[MCP_DLC] = rtr ? (frame->can_dlc | RTR_MASK) : frame->can_dlc;

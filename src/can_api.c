@@ -31,10 +31,9 @@ can_do_setup(void (*setup_routine)(void)) {
         memset(&cbcks, 0x00, sizeof(cbcks));
         net_init();
         net_start();
-        if (net_wait_join())
+        if (net_wait_join()) {
                 xprintf("Active nodes: %d\n", net_node_num());
         }
-
         cbcks.setup = setup_routine;
 }
 

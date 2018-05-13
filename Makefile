@@ -11,7 +11,7 @@ HEAP_SIZE = 0x400
 SOURCES_S = src/startup_stm32f051x8.s
 SOURCES_C = src/main.c src/system_stm32f0xx.c src/can_core.c \
 	    src/can_callbacks.c src/can_api.c src/stm32f0xx_it.c \
-	    src/xprintf.c ./src/can_net.c
+	    src/xprintf.c ./src/can_net.c ./src/jsmn.c
 SOURCES = $(SOURCES_S) $(SOURCES_C)
 OBJS = $(SOURCES_S:.s=.o) $(SOURCES_C:.c=.o)
 
@@ -47,7 +47,7 @@ MCUFLAGS = -mcpu=cortex-m0 -mlittle-endian -mfloat-abi=soft -mthumb
 
 DEBUG_OPTIMIZE_FLAGS = -O0 -ggdb
 
-CFLAGS = -Wall -Wextra --pedantic
+CFLAGS = -Wall -Wextra --std=c99
 CFLAGS_EXTRA = -nostartfiles -nodefaultlibs -nostdlib\
 	       -fdata-sections -ffunction-sections
 
